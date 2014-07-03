@@ -219,10 +219,102 @@ class GovTrackException(Exception):
 
 # Domain Objects
 
+class Bill(object):
+
+    """
+    A Bill contains
+    """
+
+    def __init__(self, is_alive=None, is_current=None, title=None, number=None,
+                 description=None, congress_session=None, introduced_date=None):
+
+        """
+        Creates a new bill
+
+        :param is_alive: Denotes if the bill is alive
+        :type is_alive: str
+        :param is_current: Denotes if the bill is current
+        :type is_current: str
+        :param title: The title for the bill
+        :type title: str
+        :param number: The bill number
+        :type number: str
+        :param description: The description for the bill
+        :type description: str
+        :param congress_session: The congress session during which the bill was introduced
+        :type congress_session: str
+        :param introduced_date: The introduced date for the bill
+        :type introduced_date: str
+
+        :returns: Bill
+        """
+
+        self.is_alive = is_alive
+        self.is_current = is_current
+        self.title = title
+        self.number = number
+        self.description = description
+        self.congress_session = congress_session
+        self.introduced_date = introduced_date
+
+    def __unicode__(self):
+        string = """ <Bill {0} Number: {1}> """
+        return string.format(self.title, self.number)
+
+    def __repr__(self):
+        string = self.__unicode__()
+
+        if not PYTHON_3:
+            return string.encode('utf-8')
+
+        return string
+
+    def __str__(self):
+        string = self.__unicode__()
+
+        if not PYTHON_3:
+            return string.encode('utf-8')
+
+        return string
+
+    def _to_dict(self):
+        return dict(is_alive=self.is_alive,
+                    is_current=self.is_current,
+                    title=self.title,
+                    number=self.number,
+                    description=self.description,
+                    congress_session=self.congress_session,
+                    introduced_date=self.introduced_date)
+
+    @staticmethod
+    def _from_json(json_data):
+        """
+        Creates a Bill from json data.
+
+        :param json_data: The raw json data to parse
+        :type json_data: dict
+        :returns: PublicOfficial
+        """
+
+        try:
+            bill = Bill(is_alive=json_data['is_alive'],
+                            is_current=json_data['is_current'],
+                            title=json_data['title'],
+                            number=json_data['number'],
+                            description=json_data['current_status_description'],
+                            congress_session=json_data['congress'],
+                            introduced_date=json_data['introduced_date'])
+
+
+            return bill
+
+        except KeyError:
+            raise GovTrackException("The given information was incomplete.")
+
 
 class PublicOfficial(object):
     """
-    A GovTrack contains
+    A PublicOfficial contains
     """
 
     def __init__(self, website=None, start_date=None, end_date=None, state=None,
@@ -248,7 +340,7 @@ class PublicOfficial(object):
         :param district: The Public Official's representing district
         :type district: float
 
-        :returns: GovTrack
+        :returns: PublicOfficial
         """
         self.website = website
         self.start_date = start_date
@@ -369,19 +461,20 @@ def get_senators(query):
     :return: the JSON response
     """
 
-    if not isinstance(query, dict):
+    if not isinstance(query, str):
         raise GovTrackException("Please enter a valid query")
 
-    query['role_type'] = "senator"
-    query['current'] = "True"
+    q = {'role_type': "senator",
+         'current': "True",
+         'party': query}
 
-    json_res = _fetch_govtrack_info(query, "role")
+    json_res = _fetch_govtrack_info(q, "role")
     json_list = json_res['objects']
 
     senators = []
     for json_dict in json_list:
         senator = PublicOfficial._from_json(json_dict)
-        senators.append(senator)
+        senators.append(senator._to_dict())
 
     return senators
 
@@ -393,13 +486,14 @@ def get_representatives(query):
     :return: the JSON response
     """
 
-    if not isinstance(query, dict):
+    if not isinstance(query, str):
         raise GovTrackException("Please enter a valid query")
 
-    query['role_type'] = "representative"
-    query['current'] = "True"
+    q = {'role_type': "representative",
+         'current': "True",
+         'party': query}
 
-    json_res = _fetch_govtrack_info(query, "role")
+    json_res = _fetch_govtrack_info(q, "role")
     json_list = json_res['objects']
 
     reps = []
@@ -408,3 +502,25 @@ def get_representatives(query):
         reps.append(rep._to_dict())
 
     return reps
+
+
+def get_bills_by_keyword(query):
+    """
+   Forms and poses the query to get information from the database
+   :param query: the values to retrieve
+   :return: list of bills
+   """
+
+    if not isinstance(query, str):
+        raise GovTrackException("Please enter a valid query")
+
+    q = {'q': query}
+    json_res = _fetch_govtrack_info(q, "bill")
+    json_list = json_res['objects']
+
+    bills = []
+    for json_dict in json_list:
+        bill = Bill._from_json(json_dict)
+        bills.append(bill._to_dict())
+
+    return bills

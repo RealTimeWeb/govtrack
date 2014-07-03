@@ -1,5 +1,4 @@
 secrets.txt
-*cache*.json
 .dropbox
 
 ### OSX
@@ -9,7 +8,8 @@ secrets.txt
 .LSOverride
 
 # Icon must end with two \r
-Icon
+Icon
+
 
 # Thumbnails
 ._*
